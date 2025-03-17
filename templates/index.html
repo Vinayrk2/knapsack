@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>0/1 Knapsack Problem Solver</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen flex items-center justify-center">
+    <div class="container mx-auto p-4 grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+        <!-- Left Side - Form -->
+        <div class="flex items-center">
+            <div class="w-full max-w-md mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                <h2 class="text-3xl font-bold text-center text-blue-500 dark:text-blue-400 mb-6">
+                    0/1 Knapsack Solver
+                </h2>
+                <form method="POST" class="space-y-6">
+                    <div class="space-y-2">
+                        <label for="values" class="block text-sm font-medium">Values (comma-separated)</label>
+                        <input 
+                            id="values" 
+                            name="values"
+                            type="text" 
+                            placeholder="e.g., 60, 100, 120" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 dark:bg-gray-700"
+                            required
+                        >
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="weights" class="block text-sm font-medium">Weights (comma-separated)</label>
+                        <input 
+                            id="weights" 
+                            name="weights"
+                            type="text" 
+                            placeholder="e.g., 10, 20, 30" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 dark:bg-gray-700"
+                            required
+                        >
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="capacity" class="block text-sm font-medium">Capacity</label>
+                        <input 
+                            id="capacity" 
+                            name="capacity"
+                            type="number" 
+                            placeholder="e.g., 50" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 dark:bg-gray-700"
+                            required
+                        >
+                    </div>
+
+                    <button 
+                        type="submit"
+                        class="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md"
+                    >
+                        Solve Knapsack Problem
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right Side - Results and Visualization -->
+        <div class="flex flex-col space-y-6">
+            {% if result %}
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    {% if result.error %}
+                        <p class="text-red-500 text-center">{{ result.error }}</p>
+                    {% else %}
+                        <h2 class="text-xl font-semibold mb-4 text-center">Results</h2>
+
+                        <!-- Visualization -->
+                        <div class="flex flex-col items-center space-y-4 mb-6">
+                            <canvas 
+                                id="knapsackCanvas" 
+                                width="400" 
+                                height="200" 
+                                class="border border-gray-200 rounded-lg"
+                            ></canvas>
+
+                            <!-- Knapsack Weight Usage Bar -->
+                            <div class="w-full bg-gray-300 rounded-full overflow-hidden">
+                                <div 
+                                    id="knapsackBar" 
+                                    class="bg-green-500 text-white text-center py-2"
+                                    style="width: {{ result.weightUsedPercentage }}%"
+                                >
+                                    {{ result.weightUsedPercentage }}% Used
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Summary Results -->
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <div class="bg-gray-100 p-4 rounded-lg">
+                                <h3 class="font-medium text-gray-700 dark:text-gray-300">Maximum Value</h3>
+                                <p class="text-2xl font-bold text-green-600">{{ result.maxValue }}</p>
+                            </div>
+                            <div class="bg-gray-100 p-4 rounded-lg">
+                                <h3 class="font-medium text-gray-700 dark:text-gray-300">Selected Items</h3>
+                                <p class="text-lg font-medium">{{ result.selectedItems | join(', ') }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Explanation Steps Dropdown -->
+                        <div class="border border-gray-200 rounded-lg">
+                            <button 
+                                onclick="toggleExplanation()"
+                                class="flex justify-between items-center w-full px-4 py-3 text-left font-medium focus:outline-none"
+                            >
+                                <span>Explanation Steps</span>
+                                <svg id="explanationArrow" class="w-5 h-5 transform transition-transform duration-200" 
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                        d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+                            <div id="explanationContent" class="hidden px-4 pb-4">
+                                <div class="max-h-80 overflow-y-auto scrollbar-thin bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+                                    <ol class="space-y-2 list-decimal list-inside">
+                                        {% for step in result.explanation %}
+                                            <li class="text-sm text-gray-700 dark:text-gray-300">{{ step }}</li>
+                                        {% endfor %}
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            {% else %}
+                <div class="flex items-center justify-center h-full">
+                    <div class="text-center text-gray-500 dark:text-gray-400">
+                        <p class="text-lg">Enter values and submit the form to see results</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        // Toggle Explanation Dropdown
+        function toggleExplanation() {
+            const content = document.getElementById('explanationContent');
+            const arrow = document.getElementById('explanationArrow');
+            content.classList.toggle('hidden');
+            arrow.classList.toggle('rotate-180');
+        }
+
+        // Visualize Knapsack Data (Mock Simulation)
+        const canvas = document.getElementById("knapsackCanvas");
+        const ctx = canvas.getContext("2d");
+
+        function drawKnapsackVisualization(selectedItems) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const totalWidth = canvas.width;
+            const itemWidth = totalWidth / selectedItems.length;
+
+            selectedItems.forEach((item, index) => {
+                ctx.fillStyle = "#4CAF50"; // Green for selected
+                ctx.fillRect(index * itemWidth, canvas.height - item.weight * 4, itemWidth - 5, item.weight * 4);
+                ctx.fillStyle = "#fff";
+                ctx.fillText(`W: ${item.weight}`, index * itemWidth + 5, canvas.height - 10);
+            });
+        }
+
+        drawKnapsackVisualization({{result.weights}}?.map((val)=>{return {"weight":val}})); // Mock data; replace with dynamic data
+    </script>
+</body>
+</html>
